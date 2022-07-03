@@ -1,8 +1,10 @@
 from flask import Flask, jsonify
+from flask_cors import CORS
 from tracking import get_status_from_code
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
+CORS(app)
 
 @app.route('/tracking/<code>', methods=['GET'])
 def get_tracking_status(code):
