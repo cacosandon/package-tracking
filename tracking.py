@@ -2,17 +2,18 @@ import re
 import requests
 
 STORE_NAME = 'modelandola'
-STORE_CODE_REGEX = r'#MODE[1-9]*'
+STORE_CODE_REGEX = r'MODE[1-9]*'
 SUCCESS_CODE = 200
 
 KNOWN_STATUS_MESSAGES_MAPPING = [
     ['Status: Recibido SER', 'Paquete recibido en centro de distribución'],
-    ['Status: Entregado', 'Paquete entregado 😊']
+    ['Status: Entregado', 'Paquete entregado 😊'],
+    ['Status: Planificación', 'Tu paquete está en preparación, atenta a tu correo y/o mensaje de texto. Te avisaremos cuando esté en camino :)']
 ]
 
 def get_status_message_from_alas(code):
     alas_url = f"https://integration.alasxpress.com/shopify/{STORE_NAME}/search.php"
-    request_data = { 'term': code }
+    request_data = { 'term': f"#{code}" }
 
     response = requests.post(url = alas_url, data = request_data)
     
@@ -39,7 +40,7 @@ def get_status_from_code(code):
     code_not_registered_message = 'no existe'
 
     if code_not_registered_message in message_from_alas:
-        return 'Tu pedido está en preparación, atenta a tu correo y/o mensaje de texto. Te avisaremos cuando esté en camino :)'
+        return 'Tu paquete está en preparación. Llegará en un plazo máximo de 24 horas hábiles.'
     
     return message_from_alas
 
