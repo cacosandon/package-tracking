@@ -2,7 +2,7 @@ import re
 import requests
 
 STORE_NAME = 'modelandola'
-STORE_CODE_REGEX = r'MODE[1-9]*'
+STORE_CODE_REGEX = r'MODE[0-9]*'
 SUCCESS_CODE = 200
 
 KNOWN_STATUS_MESSAGES_MAPPING = [
