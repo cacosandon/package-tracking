@@ -2,17 +2,14 @@ import re
 import requests
 import shopify
 import os
+import json
+from datetime import datetime
 
 STORE_NAME = 'modelandola'
 STORE_CODE_REGEX = r'MODE[0-9]*'
 SUCCESS_CODE = 200
 
-KNOWN_STATUS_MESSAGES_MAPPING = [
-    ['Status: Recepción Física', 'Paquete recibido en centro de distribución'],
-    ['Status: Recibido SER', 'Paquete recibido en centro de distribución'],
-    ['Status: Entregado', 'Paquete entregado 😊'],
-    ['Status: Planificación', 'Tu paquete está en planificación de envío, atenta a tu correo y/o mensaje de texto. Te avisaremos cuando esté en camino 😊']
-]
+ALAS_TOKEN = os.environ.get("ALAS_TOKEN")
 
 def get_status_from_shopify(code):
     shop_url = "modelandolach.myshopify.com"
@@ -24,23 +21,24 @@ def get_status_from_shopify(code):
             return False
 
         order = orders[0].attributes
+
         if order["cancelled_at"]:
-            return "El pedido ha sido cancelado"
+            return "El pedido ha sido cancelado."
 
         if order["financial_status"] != "paid":
-            return "El pedido aún no ha sido pagado"
+            return "El pedido aún no ha sido pagado."
 
         if order["fulfillment_status"] != "fulfilled":
             return "Estamos preparando tu pedido 💞"
 
-        return "El pedido está listo y en proceso de envío"
+        return "El pedido está listo y en proceso de envío."
 
     return False
 
 
 def get_status_message_from_alas(code):
-    alas_url = f"https://integration.alasxpress.com/shopify/{STORE_NAME}/search.php"
-    request_data = { 'term': f"#{code}" }
+    alas_url = f"https://us-central1-api-ce0-alas.cloudfunctions.net/getDeliveryOrder?token={ALAS_TOKEN}"
+    request_data = { 'external_id': f"#{code}" }
 
     response = requests.post(url = alas_url, data = request_data)
 
@@ -50,30 +48,30 @@ def get_status_message_from_alas(code):
     return parse_message_from_alas(response.text)
 
 def parse_message_from_alas(message):
-    raw_text = message.replace('<p>', '').replace('</p>', '\ns').strip()
+    data = json.loads(message)
+    if len(data) == 0:
+        return "no existe"
 
-    for known_status_message in KNOWN_STATUS_MESSAGES_MAPPING:
-        alas_substring, new_message = known_status_message
-        if alas_substring in raw_text:
-            return new_message
+    str_datetime = data[0]['time_info']['b2c_delivery_expected']
+    datetime_string = datetime.strptime(str_datetime, "%Y-%m-%dT%H:%M:%S").strftime("%d/%m/%Y")
 
-    return raw_text
+    return f"Tu pedido llegará el {datetime_string}."
 
 def get_status_from_code(code):
     if not re.fullmatch(STORE_CODE_REGEX, code):
-        return "El código debe ser de la forma 'MODEXXXX'"
+        return "El código debe ser de la forma 'MODEXXXX'."
 
     shopify_status = get_status_from_shopify(code)
     if not shopify_status:
         return "No encontramos el pedido 😞"
 
-    if shopify_status != "El pedido está listo y en proceso de envío":
+    if shopify_status != "El pedido está listo y en proceso de envío.":
         return shopify_status
 
     message_from_alas = get_status_message_from_alas(code)
     code_not_registered_message = "no existe"
 
     if code_not_registered_message in message_from_alas:
-        return "Tu paquete ya está listo 💞. Llegará en un plazo máximo de 24 horas hábiles."
+        return "Tu paquete ya está listo 💞. Llegará en un plazo máximo de 24 horas hábiles. Atenta a tus mensajes de texto!"
 
     return message_from_alas
