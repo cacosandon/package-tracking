@@ -4,6 +4,9 @@ import shopify
 import os
 import json
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 STORE_NAME = 'modelandola'
 STORE_CODE_REGEX = r'MODE[0-9]*'
